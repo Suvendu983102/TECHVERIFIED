@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TECHVERIFIED — Deep-Dive Tech Reviews</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config={theme:{extend:{colors:{'deep-black':'#0A0A0A','signal-red':'#E30000','neon-yellow':'#CCFF00','electric-blue':'#0066FF'},fontFamily:{'display':['"Bebas Neue"','sans-serif'],'grotesk':['"Space Grotesk"','sans-serif']}}}}
+</script>
+<style>
+:root{--accent:#E30000;--accent-glow:rgba(227,0,0,0.15)}
+*{scrollbar-width:thin;scrollbar-color:#333 #0A0A0A}
+::selection{background:#E30000;color:#fff}
+body{background:#0A0A0A;color:#fff;font-family:'Space Grotesk',sans-serif;overflow-x:hidden}
+
+/* Film Grain Overlay */
+#grain{position:fixed;inset:0;pointer-events:none;z-index:9998;opacity:.035;mix-blend-mode:overlay}
+
+/* Accent Bar Below Nav */
+#accent-bar{position:fixed;top:64px;left:0;width:100%;height:2px;z-index:999;background:var(--accent);transition:background .6s ease,box-shadow .6s ease;box-shadow:0 0 12px var(--accent-glow)}
+
+/* Nav */
+nav{position:fixed;top:0;left:0;width:100%;z-index:9999;backdrop-filter:blur(12px);background:rgba(10,10,10,0.85);border-bottom:1px solid rgba(255,255,255,0.04);transition:background .3s}
+
+/* Section Label */
+.section-label{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:3px;color:var(--accent);text-transform:uppercase;transition:color .6s ease}
+
+/* Video Card Hover Play Simulation */
+.vcard .vthumb img{transition:transform 4s cubic-bezier(.25,.46,.45,.94),filter .4s ease}
+.vcard:hover .vthumb img{transform:scale(1.1);filter:brightness(1.1)}
+.vcard .play-overlay{opacity:0;transition:opacity .3s ease}
+.vcard:hover .play-overlay{opacity:1}
+.vcard .progress-bar{width:0;transition:width 8s linear}
+.vcard:hover .progress-bar{width:100%}
+.vcard .scanlines{opacity:0;transition:opacity .3s}
+.vcard:hover .scanlines{opacity:1}
+.vcard .playing-tag{opacity:0;transition:opacity .3s}
+.vcard:hover .playing-tag{opacity:1}
+
+/* Scanlines */
+.scanlines::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);pointer-events:none;z-index:2}
+
+/* Shuffle Animation */
+.shuffle-card{transition:opacity .3s ease,transform .3s cubic-bezier(.25,.46,.45,.94)}
+.shuffle-card.hidden-card{opacity:0;transform:scale(.92) translateY(12px);pointer-events:none;position:absolute}
+
+/* Typewriter Cursor */
+.typewriter-cursor{display:inline-block;width:2px;height:1em;background:var(--accent);margin-left:2px;animation:blink 1s step-end infinite;vertical-align:text-bottom}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* Price Slider */
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:linear-gradient(90deg,#E30000,#CCFF00);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;background:#fff;border-radius:50%;cursor:pointer;box-shadow:0 0 8px rgba(227,0,0,0.4)}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;background:#fff;border-radius:50%;cursor:pointer;border:none}
+
+/* Verdict Badges */
+.badge-top{background:#E30000;color:#fff}.badge-value{background:#CCFF00;color:#0A0A0A}.badge-premium{background:#0066FF;color:#fff}
+
+/* Sticky Video */
+.sticky-video{position:sticky;top:80px}
+
+/* Section Divider */
+.section-divider{height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:.3;transition:background .6s ease}
+
+/* Hero Play Button Pulse */
+@keyframes pulse-ring{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.6);opacity:0}}
+.pulse-ring{animation:pulse-ring 1.8s ease-out infinite}
+
+/* Decorative Large Text */
+.deco-text{font-family:'Bebas Neue',sans-serif;font-size:clamp(80px,12vw,180px);letter-spacing:8px;color:rgba(255,255,255,0.02);position:absolute;pointer-events:none;user-select:none;white-space:nowrap}
+
+/* Scroll Reveal */
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+/* Reduced motion */
+@media(prefers-reduced-motion:reduce){*{animation-duration:0s!important;transition-duration:0s!important}}
+</style>
+</head>
+<body>
+
+<!-- Film Grain -->
+<canvas id="grain" aria-hidden="true"></canvas>
+
+<!-- Accent Bar -->
+<div id="accent-bar"></div>
+
+<!-- Navigation -->
+<nav>
+<div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+    <a href="#hero" class="flex items-center gap-3 group">
+        <div class="w-8 h-8 bg-signal-red flex items-center justify-center rounded-sm group-hover:rotate-90 transition-transform duration-300">
+            <i class="fa-solid fa-play text-white text-xs ml-0.5"></i>
+        </div>
+        <span class="font-display text-2xl tracking-wider">TECHVERIFIED</span>
+    </a>
+    <div class="hidden md:flex items-center gap-8 text-sm font-medium tracking-wide">
+        <a href="#videos" class="text-gray-400 hover:text-white transition-colors">Videos</a>
+        <a href="#reviews" class="text-gray-400 hover:text-white transition-colors">Reviews</a>
+        <a href="#recommendations" class="text-gray-400 hover:text-white transition-colors">What I'd Buy</a>
+        <a href="#community" class="text-gray-400 hover:text-white transition-colors">Community</a>
+    </div>
+    <div class="flex items-center gap-4">
+        <button id="mobile-menu-btn" class="md:hidden text-gray-400 hover:text-white" aria-label="Menu"><i class="fa-solid fa-bars text-lg"></i></button>
+        <a href="#community" class="hidden md:inline-flex items-center gap-2 bg-signal-red hover:bg-red-700 text-white text-xs font-bold tracking-wider px-4 py-2 rounded-sm transition-colors">
+            <i class="fa-solid fa-bell"></i> SUBSCRIBE
+        </a>
+    </div>
+</div>
+<!-- Mobile Menu -->
+<div id="mobile-menu" class="hidden md:hidden border-t border-white/5 bg-deep-black/95 backdrop-blur-xl">
+    <div class="px-6 py-4 flex flex-col gap-4 text-sm font-medium tracking-wide">
+        <a href="#videos" class="text-gray-400 hover:text-white transition-colors py-2">Videos</a>
+        <a href="#reviews" class="text-gray-400 hover:text-white transition-colors py-2">Reviews</a>
+        <a href="#recommendations" class="text-gray-400 hover:text-white transition-colors py-2">What I'd Buy</a>
+        <a href="#community" class="text-gray-400 hover:text-white transition-colors py-2">Community</a>
+    </div>
+</div>
+</nav>
+
+<!-- ==================== HERO SECTION ==================== -->
+<section id="hero" data-accent="#E30000" class="relative min-h-screen pt-16 overflow-hidden">
+<div class="deco-text top-24 -left-4">LATEST</div>
+<div class="max-w-7xl mx-auto px-6 py-12 lg:py-20">
+    <div class="section-label mb-6">01 / Latest Release</div>
+    <!-- Cinematic 16:9 Hero Block -->
+    <div class="relative aspect-video rounded-lg overflow-hidden group cursor-pointer" id="hero-video">
+        <img src="https://picsum.photos/seed/techhero25/1280/720" alt="Latest video thumbnail" class="w-full h-full object-cover transition-transform duration-[6s] ease-out group-hover:scale-105" loading="eager">
+        <!-- Dark Gradient Overlay -->
+        <div class="absolute inset-0 bg-gradient-to-t from-deep-black via-deep-black/40 to-transparent"></div>
+        <div class="absolute inset-0 bg-gradient-to-r from-deep-black/60 to-transparent"></div>
+        <!-- Scanlines on hover -->
+        <div class="scanlines absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <!-- Play Button -->
+        <div class="absolute inset-0 flex items-center justify-center">
+            <div class="relative">
+                <div class="absolute inset-0 bg-signal-red/40 rounded-full pulse-ring"></div>
+                <div class="w-20 h-20 lg:w-24 lg:h-24 bg-signal-red/90 backdrop-blur-sm rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <i class="fa-solid fa-play text-white text-2xl lg:text-3xl ml-1"></i>
+                </div>
+            </div>
+        </div>
+        <!-- Progress Bar on hover -->
+        <div class="absolute bottom-0 left-0 w-full h-1 bg-white/10">
+            <div class="h-full bg-signal-red progress-bar"></div>
+        </div>
+        <!-- Video Info -->
+        <div class="absolute bottom-0 left-0 right-0 p-6 lg:p-10">
+            <div class="flex items-center gap-3 mb-3">
+                <span class="bg-signal-red text-white text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-sm">NEW</span>
+                <span class="text-gray-400 text-xs tracking-wider">SMARTPHONES</span>
+                <span class="playing-tag bg-neon-yellow text-deep-black text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-sm">PLAYING</span>
+            </div>
+            <h1 class="font-display text-3xl sm:text-4xl lg:text-6xl tracking-wide leading-tight mb-3">Samsung Galaxy S25 Ultra:<br>The Complete Review</h1>
+            <div class="flex items-center gap-4 text-sm text-gray-400">
+                <span><i class="fa-solid fa-eye mr-1.5"></i>2.4M views</span>
+                <span><i class="fa-regular fa-clock mr-1.5"></i>24:18</span>
+                <span><i class="fa-regular fa-calendar mr-1.5"></i>Jan 28, 2025</span>
+            </div>
+        </div>
+    </div>
+    <!-- Creator Info Bar -->
+    <div class="flex items-center gap-4 mt-6">
+        <img src="https://picsum.photos/seed/creatorface/80/80" alt="Creator portrait" class="w-12 h-12 rounded-full object-cover border-2 border-signal-red">
+        <div>
+            <p class="font-semibold text-sm">Alex Chen <i class="fa-solid fa-circle-check text-electric-blue text-xs ml-1"></i></p>
+            <p class="text-gray-500 text-xs">1.2M subscribers</p>
+        </div>
+        <button class="ml-auto bg-signal-red hover:bg-red-700 text-white text-xs font-bold tracking-wider px-5 py-2 rounded-sm transition-colors">SUBSCRIBE</button>
+    </div>
+</div>
+</section>
+
+<div class="section-divider max-w-7xl mx-auto"></div>
+
+<!-- ==================== VIDEO LIBRARY ==================== -->
+<section id="videos" data-accent="#0066FF" class="relative py-20 overflow-hidden">
+<div class="deco-text top-10 right-0 opacity-100">ARCHIVE</div>
+<div class="max-w-7xl mx-auto px-6">
+    <div class="section-label mb-4">02 / Video Library</div>
+    <h2 class="font-display text-4xl lg:text-5xl tracking-wide mb-8">Every Deep Dive, One Place</h2>
+
+    <!-- Category Filters -->
+    <div class="flex flex-wrap gap-2 mb-10" id="filters" role="tablist">
+        <button class="filter-btn active bg-signal-red text-white text-xs font-bold tracking-wider px-4 py-2 rounded-sm transition-all duration-300" data-filter="all" role="tab" aria-selected="true">ALL</button>
+        <button class="filter-btn bg-white/5 text-gray-400 hover:bg-white/10 text-xs font-bold tracking-wider px-4 py-2 rounded-sm transition-all duration-300" data-filter="smartphones" role="tab" aria-selected="false">SMARTPHONES</button>
+        <button class="filter-btn bg-white/5 text-gray-400 hover:bg-white/10 text-xs font-bold tracking-wider px-4 py-2 rounded-sm transition-all duration-300" data-filter="laptops" role="tab" aria-selected="false">LAPTOPS</button>
+        <button class="filter-btn bg-white/5 text-gray-400 hover:bg-white/10 text-xs font-bold tracking-wider px-4 py-2 rounded-sm transition-all duration-300" data-filter="audio" role="tab" aria-selected="false">AUDIO</button>
+        <button class="filter-btn bg-white/5 text-gray-400 hover:bg-white/10 text-xs font-bold tracking-wider px-4 py-2 rounded-sm transition-all duration-300" data-filter="cameras" role="tab" aria-selected="false">CAMERAS</button>
+        <button class="filter-btn bg-white/5 text-gray-400 hover:bg-white/10 text-xs font-bold tracking-wider px-4 py-2 rounded-sm transition-all duration-300" data-filter="wearables" role="tab" aria-selected="false">WEARABLES</button>
+    </div>
+
+    <!-- Video Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="video-grid"></div>
+</div>
+</section>
+
+<div class="section-divider max-w-7xl mx-auto"></div>
+
+<!-- ==================== WRITTEN REVIEWS ==================== -->
+<section id="reviews" data-accent="#CCFF00" class="relative py-20 overflow-hidden">
+<div class="deco-text top-20 -left-2">DEEP DIVES</div>
+<div class="max-w-7xl mx-auto px-6">
+    <div class="section-label mb-4">03 / Written Companions</div>
+    <h2 class="font-display text-4xl lg:text-5xl tracking-wide mb-4">Read Along While The Video Plays</h2>
+    <p class="text-gray-400 mb-10 max-w-xl">Extended analysis, benchmark data, and nuanced takes that go beyond the video. Sticky player keeps you synced.</p>
+
+    <!-- Review Selector -->
+    <div class="flex flex-wrap gap-2 mb-8" id="review-tabs"></div>
+
+    <!-- Review Content: Sticky Video + Scrollable Text -->
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-8" id="review-container">
+        <!-- Sticky Video Player -->
+        <div class="lg:col-span-2">
+            <div class="sticky-video">
+                <div class="aspect-video rounded-lg overflow-hidden bg-gray-900 relative" id="review-video-player">
+                    <img src="https://picsum.photos/seed/reviewvid1/640/360" alt="Review video" class="w-full h-full object-cover" id="review-video-img">
+                    <div class="absolute inset-0 bg-gradient-to-t from-deep-black/60 to-transparent"></div>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="w-14 h-14 bg-signal-red/90 rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-transform" id="review-play-btn">
+                            <i class="fa-solid fa-play text-white text-lg ml-0.5"></i>
+                        </div>
+                    </div>
+                    <div class="absolute bottom-3 left-3 right-3">
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                                <div class="h-full bg-signal-red rounded-full" style="width:35%" id="review-progress"></div>
+                            </div>
+                            <span class="text-[10px] text-gray-400" id="review-time">8:24 / 24:18</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 mt-2 flex items-center gap-1.5"><i class="fa-solid fa-thumbtack text-neon-yellow"></i> Video stays pinned while you read</p>
+            </div>
+        </div>
+
+        <!-- Scrollable Review Text -->
+        <div class="lg:col-span-3" id="review-text">
+            <div class="prose-container space-y-6"></div>
+        </div>
+    </div>
+</div>
+</section>
+
+<div class="section-divider max-w-7xl mx-auto"></div>
+
+<!-- ==================== RECOMMENDATIONS ==================== -->
+<section id="recommendations" data-accent="#E30000" class="relative py-20 overflow-hidden">
+<div class="deco-text top-16 right-0 opacity-100">BUYERS</div>
+<div class="max-w-7xl mx-auto px-6">
+    <div class="section-label mb-4">04 / Recommendations</div>
+    <h2 class="font-display text-4xl lg:text-5xl tracking-wide mb-4">What I'd Buy at $<span id="price-display">1000</span></h2>
+    <p class="text-gray-400 mb-8 max-w-xl">Real opinions, real price points. Slide to set your budget and see what actually makes the cut.</p>
+
+    <!-- Price Range Slider -->
+    <div class="max-w-md mb-10">
+        <div class="flex justify-between text-xs text-gray-500 mb-2">
+            <span>$50</span>
+            <span>$2,000+</span>
+        </div>
+        <input type="range" min="50" max="2000" value="1000" step="50" id="price-slider" aria-label="Budget range">
+    </div>
+
+    <!-- Recommendation Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="reco-grid"></div>
+</div>
+</section>
+
+<div class="section-divider max-w-7xl mx-auto"></div>
+
+<!-- ==================== COMMUNITY: NEWSLETTER & PATREON ==================== -->
+<section id="community" data-accent="#0066FF" class="relative py-20 overflow-hidden">
+<div class="deco-text bottom-10 left-1/2 -translate-x-1/2">JOIN</div>
+<div class="max-w-7xl mx-auto px-6">
+    <div class="section-label mb-4">05 / Community</div>
+    <h2 class="font-display text-4xl lg:text-5xl tracking-wide mb-12">Go Deeper With Us</h2>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Newsletter -->
+        <div class="bg-white/[0.03] border border-white/5 rounded-lg p-8 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-signal-red/5 rounded-bl-full"></div>
+            <i class="fa-solid fa-envelope text-signal-red text-3xl mb-4"></i>
+            <h3 class="font-display text-2xl tracking-wider mb-2">The Weekly Signal</h3>
+            <p class="text-gray-400 text-sm mb-6">One email. Zero fluff. Every Friday.</p>
+            <form id="newsletter-form" class="flex gap-2" onsubmit="return false;">
+                <div class="flex-1 relative">
+                    <input type="email" id="newsletter-input" class="w-full bg-white/5 border border-white/10 text-white text-sm px-4 py-3 rounded-sm focus:outline-none focus:border-signal-red transition-colors placeholder-gray-600" aria-label="Email address">
+                </div>
+                <button type="submit" class="bg-signal-red hover:bg-red-700 text-white text-xs font-bold tracking-wider px-5 py-3 rounded-sm transition-colors whitespace-nowrap">JOIN</button>
+            </form>
+            <p class="text-gray-600 text-xs mt-3">No spam. Unsubscribe anytime.</p>
+        </div>
+
+        <!-- Patreon -->
+        <div class="bg-white/[0.03] border border-white/5 rounded-lg p-8 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-electric-blue/5 rounded-bl-full"></div>
+            <i class="fa-brands fa-patreon text-electric-blue text-3xl mb-4"></i>
+            <h3 class="font-display text-2xl tracking-wider mb-2">Patreon Inner Circle</h3>
+            <p class="text-gray-400 text-sm mb-6">BTS access, raw footage, and direct Q&A.</p>
+            <div class="space-y-3">
+                <div class="flex items-center justify-between bg-white/[0.03] rounded-sm px-4 py-3 border border-white/5">
+                    <div>
+                        <span class="font-bold text-sm">Signal Tier</span>
+                        <span class="text-gray-500 text-xs ml-2">Early access + BTS</span>
+                    </div>
+                    <span class="font-display text-lg text-neon-yellow">$5/mo</span>
+                </div>
+                <div class="flex items-center justify-between bg-white/[0.03] rounded-sm px-4 py-3 border border-electric-blue/20">
+                    <div>
+                        <span class="font-bold text-sm">Direct Line</span>
+                        <span class="text-gray-500 text-xs ml-2">Everything + monthly Q&A</span>
+                    </div>
+                    <span class="font-display text-lg text-neon-yellow">$15/mo</span>
+                </div>
+            </div>
+            <a href="#" class="inline-flex items-center gap-2 mt-4 text-electric-blue text-xs font-bold tracking-wider hover:underline"><i class="fa-solid fa-arrow-right"></i> BECOME A PATRON</a>
+        </div>
+    </div>
+
+    <!-- BTS Shots -->
+    <div class="mt-12 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <img src="https://picsum.photos/seed/bts1/400/300" alt="Behind the scenes" class="w-full aspect-video object-cover rounded-sm opacity-60 hover:opacity-100 transition-opacity duration-300">
+        <img src="https://picsum.photos/seed/bts2/400/300" alt="Behind the scenes" class="w-full aspect-video object-cover rounded-sm opacity-60 hover:opacity-100 transition-opacity duration-300">
+        <img src="https://picsum.photos/seed/bts3/400/300" alt="Behind the scenes" class="w-full aspect-video object-cover rounded-sm opacity-60 hover:opacity-100 transition-opacity duration-300">
+        <img src="https://picsum.photos/seed/bts4/400/300" alt="Behind the scenes" class="w-full aspect-video object-cover rounded-sm opacity-60 hover:opacity-100 transition-opacity duration-300">
+    </div>
+</div>
+</section>
+
+<!-- ==================== FOOTER ==================== -->
+<footer class="border-t border-white/5 py-12 mt-10">
+<div class="max-w-7xl mx-auto px-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
+        <div>
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-7 h-7 bg-signal-red flex items-center justify-center rounded-sm"><i class="fa-solid fa-play text-white text-[10px] ml-0.5"></i></div>
+                <span class="font-display text-xl tracking-wider">TECHVERIFIED</span>
+            </div>
+            <p class="text-gray-500 text-xs leading-relaxed">Opinionated deep dives into the tech that matters. No sponsor scripts, no punch-pulling.</p>
+        </div>
+        <div>
+            <h4 class="font-bold text-xs tracking-widest text-gray-400 mb-3">CONTENT</h4>
+            <div class="space-y-2 text-sm text-gray-500"><a href="#" class="block hover:text-white transition-colors">Videos</a><a href="#" class="block hover:text-white transition-colors">Written Reviews</a><a href="#" class="block hover:text-white transition-colors">Buyer's Guides</a><a href="#" class="block hover:text-white transition-colors">Podcast</a></div>
+        </div>
+        <div>
+            <h4 class="font-bold text-xs tracking-widest text-gray-400 mb-3">CONNECT</h4>
+            <div class="space-y-2 text-sm text-gray-500"><a href="#" class="block hover:text-white transition-colors">YouTube</a><a href="#" class="block hover:text-white transition-colors">Twitter / X</a><a href="#" class="block hover:text-white transition-colors">Instagram</a><a href="#" class="block hover:text-white transition-colors">Discord</a></div>
+        </div>
+        <div>
+            <h4 class="font-bold text-xs tracking-widest text-gray-400 mb-3">SUPPORT</h4>
+            <div class="space-y-2 text-sm text-gray-500"><a href="#" class="block hover:text-white transition-colors">Patreon</a><a href="#" class="block hover:text-white transition-colors">Newsletter</a><a href="#" class="block hover:text-white transition-colors">Contact</a><a href="#" class="block hover:text-white transition-colors">Press Kit</a></div>
+        </div>
+    </div>
+    <div class="flex flex-col sm:flex-row justify-between items-center gap-4 pt-6 border-t border-white/5">
+        <p class="text-gray-600 text-xs">&copy; 2025 TechVerified. All rights reserved.</p>
+        <div class="flex gap-4">
+            <a href="#" class="text-gray-600 hover:text-white transition-colors" aria-label="YouTube"><i class="fa-brands fa-youtube"></i></a>
+            <a href="#" class="text-gray-600 hover:text-white transition-colors" aria-label="Twitter"><i class="fa-brands fa-x-twitter"></i></a>
+            <a href="#" class="text-gray-600 hover:text-white transition-colors" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+            <a href="#" class="text-gray-600 hover:text-white transition-colors" aria-label="Discord"><i class="fa-brands fa-discord"></i></a>
+        </div>
+    </div>
+</div>
+</footer>
+
+<!-- Toast Notification -->
+<div id="toast" class="fixed bottom-6 right-6 bg-white/10 backdrop-blur-xl border border-white/10 text-white text-sm px-5 py-3 rounded-sm transform translate-y-20 opacity-0 transition-all duration-300 z-[10000]">
+    <span id="toast-msg"></span>
+</div>
+
+<script>
+// ========== DATA ==========
+const videos = [
+    { id:1, title:"Samsung Galaxy S25 Ultra: The Complete Review", category:"smartphones", views:"2.4M", date:"Jan 28, 2025", duration:"24:18", img:"techvid1" },
+    { id:2, title:"M4 MacBook Pro 14\": Two Weeks Later", category:"laptops", views:"1.8M", date:"Jan 21, 2025", duration:"18:42", img:"techvid2" },
+    { id:3, title:"Sony WH-1000XM6: New ANC King?", category:"audio", views:"1.2M", date:"Jan 14, 2025", duration:"15:30", img:"techvid3" },
+    { id:4, title:"Canon EOS R5 Mark II: Full Frame Beast", category:"cameras", views:"890K", date:"Jan 7, 2025", duration:"22:05", img:"techvid4" },
+    { id:5, title:"Apple Watch Ultra 3: Adventure Ready?", category:"wearables", views:"1.1M", date:"Dec 31, 2024", duration:"12:48", img:"techvid5" },
+    { id:6, title:"Framework 16: The Modular Laptop Grows Up", category:"laptops", views:"670K", date:"Dec 24, 2024", duration:"20:11", img:"techvid6" },
+    { id:7, title:"Pixel 9 Pro Fold: Google's Second Swing", category:"smartphones", views:"980K", date:"Dec 17, 2024", duration:"16:33", img:"techvid7" },
+    { id:8, title:"AirPods Max 2: Worth The Wait?", category:"audio", views:"1.5M", date:"Dec 10, 2024", duration:"14:07", img:"techvid8" },
+    { id:9, title:"DJI Osmo Pocket 3: Creator's Dream", category:"cameras", views:"540K", date:"Dec 3, 2024", duration:"11:52", img:"techvid9" },
+];
+
+const reviewsData = [
+    {
+        title:"Samsung Galaxy S25 Ultra",
+        category:"Smartphones",
+        videoImg:"reviewvid1",
+        content:`
+        <h2 class="font-display text-3xl tracking-wide mb-4">Samsung Galaxy S25 Ultra — Full Written Review</h2>
+        <p class="text-gray-400 text-xs tracking-wider mb-6">PUBLISHED JAN 28, 2025 &middot; 18 MIN READ &middot; COMPANION TO VIDEO</p>
+        <p>The Galaxy S25 Ultra doesn't reinvent the wheel — it refines it with surgical precision. After 14 days as my daily driver, here's every detail that matters.</p>
+        <h3 class="font-display text-xl tracking-wider mt-8 mb-3 text-neon-yellow">Build & Design</h3>
+        <p>Titanium frame continues from the S24 Ultra but with subtly rounded corners that actually feel different in-hand. The 6.9" Dynamic AMOLED display hits 2600 nits peak brightness — visible even under direct sunlight. The anti-reflective coating is noticeably improved.</p>
+        <div class="grid grid-cols-2 gap-4 my-6">
+            <div class="bg-white/[0.03] border border-white/5 rounded-sm p-4"><p class="font-display text-2xl text-neon-yellow">6.9"</p><p class="text-xs text-gray-500">Display Size</p></div>
+            <div class="bg-white/[0.03] border border-white/5 rounded-sm p-4"><p class="font-display text-2xl text-neon-yellow">2600</p><p class="text-xs text-gray-500">Peak Nits</p></div>
+            <div class="bg-white/[0.03] border border-white/5 rounded-sm p-4"><p class="font-display text-2xl text-neon-yellow">233g</p><p class="text-xs text-gray-500">Weight</p></div>
+            <div class="bg-white/[0.03] border border-white/5 rounded-sm p-4"><p class="font-display text-2xl text-neon-yellow">IP68</p><p class="text-xs text-gray-500">Rating</p></div>
+        </div>
+        <h3 class="font-display text-xl tracking-wider mt-8 mb-3 text-neon-yellow">Performance</h3>
+        <p>The Snapdragon 8 Elite is a significant jump. Geekbench single-core scores hit 2,310 — up 37% from the S24 Ultra. In real use, app launch times dropped by roughly 20%, and the GPU handles Genshin Impact at max settings without breaking a sweat.</p>
+        <h3 class="font-display text-xl tracking-wider mt-8 mb-3 text-neon-yellow">Camera Verdict</h3>
+        <p>The 200MP main sensor returns with improved ISP processing. Night mode is cleaner with less color banding. The 5x telephoto is still the best in the business for daytime, but the 10x digital crop from the 5x lens shows more painting than I'd like at pixel level.</p>
+        <div class="grid grid-cols-2 gap-4 my-6">
+            <div class="bg-neon-yellow/10 border border-neon-yellow/20 rounded-sm p-4">
+                <p class="font-bold text-sm text-neon-yellow mb-2">Pros</p>
+                <ul class="text-sm space-y-1 text-gray-300"><li>Best display on any phone</li><li>Snapdragon 8 Elite dominates</li><li>S Pen still uniquely useful</li><li>7 years of updates</li></ul>
+            </div>
+            <div class="bg-signal-red/10 border border-signal-red/20 rounded-sm p-4">
+                <p class="font-bold text-sm text-signal-red mb-2">Cons</p>
+                <ul class="text-sm space-y-1 text-gray-300"><li>Incremental design change</li><li>10x zoom quality degraded</li><li>Battery same as last year</li><li>$1,299 starting price</li></ul>
+            </div>
+        </div>
+        <h3 class="font-display text-xl tracking-wider mt-8 mb-3 text-neon-yellow">Final Verdict</h3>
+        <p>If you have the S24 Ultra, skip this. If you're coming from the S22 or earlier, the cumulative improvements are massive. This is the most complete Android phone you can buy — but "complete" and "exciting" aren't the same thing.</p>
+        <div class="flex items-center gap-4 mt-6 p-4 bg-white/[0.03] border border-white/5 rounded-sm">
+            <span class="font-display text-4xl text-signal-red">8.4</span>
+            <div><p class="font-bold">Very Good</p><p class="text-xs text-gray-500">Not groundbreaking, but excellent at everything</p></div>
+        </div>
+        `
+    },
+    {
+        title:"M4 MacBook Pro 14\"",
+        category:"Laptops",
+        videoImg:"reviewvid2",
+        content:`
+        <h2 class="font-display text-3xl tracking-wide mb-4">M4 MacBook Pro 14\" — Full Written Review</h2>
+        <p class="text-gray-400 text-xs tracking-wider mb-6">PUBLISHED JAN 21, 2025 &middot; 15 MIN READ &middot; COMPANION TO VIDEO</p>
+        <p>The M4 MacBook Pro arrives with a bold claim: up to 10 CPU cores and 16 GPU cores on the Pro chip. But numbers on a slide mean nothing without real-world validation.</p>
+        <h3 class="font-display text-xl tracking-wider mt-8 mb-3 text-electric-blue">Performance Headlines</h3>
+        <p>Geekbench 6: Single-core 3,850 / Multi-core 15,200. That single-core score obliterates every Intel laptop and even edges past the M3 Max in some workloads. The unified memory bandwidth now hits 273 GB/s on the Pro chip.</p>
+        <div class="grid grid-cols-2 gap-4 my-6">
+            <div class="bg-white/[0.03] border border-white/5 rounded-sm p-4"><p class="font-display text-2xl text-electric-blue">3,850</p><p class="text-xs text-gray-500">Single-Core</p></div>
+            <div class="bg-white/[0.03] border border-white/5 rounded-sm p-4"><p class="font-display text-2xl text-electric-blue">15,200</p><p class="text-xs text-gray-500">Multi-Core</p></div>
+        </div>
+        <h3 class="font-display text-xl tracking-wider mt-8 mb-3 text-electric-blue">The Nano-Texture Display</h3>
+        <p>For $150 extra, the nano-texture display is stunning for controlled lighting environments. It eliminates 95% of reflections without the hazy quality of older matte coatings. If you work near windows, it's worth every penny.</p>
+        <h3 class="font-display text-xl tracking-wider mt-8 mb-3 text-electric-blue">Battery Life</h3>
+        <p>In my looped video playback test: 22 hours 18 minutes. Under real workloads (Xcode + Safari + Figma + Slack): 14 hours. This is absurd for a performance laptop.</p>
+        <div class="flex items-center gap-4 mt-6 p-4 bg-white/[0.03] border border-white/5 rounded-sm">
+            <span class="font-display text-4xl text-electric-blue">9.1</span>
+            <div><p class="font-bold">Exceptional</p><p class="text-xs text-gray-500">The best laptop for most pros, period</p></div>
+        </div>
+        `
+    },
+    {
+        title:"Sony WH-1000XM6",
+        category:"Audio",
+        videoImg:"reviewvid3",
+        content:`
+        <h2 class="font-display text-3xl tracking-wide mb-4">Sony WH-1000XM6 — Full Written Review</h2>
+        <p class="text-gray-400 text-xs tracking-wider mb-6">PUBLISHED JAN 14, 2025 &middot; 12 MIN READ &middot; COMPANION TO VIDEO</p>
+        <p>Sony's XM series has been the ANC benchmark for four generations. The XM6 has big shoes to fill — and a new design language that's bound to be divisive.</p>
+        <h3 class="font-display text-xl tracking-wider mt-8 mb-3 text-signal-red">Design Change</h3>
+        <p>The biggest visual shift: earcups now rotate flat and the headband is thinner. Weight drops to 238g from 250g. The touch panel is gone — replaced by physical buttons. Controversial? Yes. Better with gloves? Absolutely.</p>
+        <h3 class="font-display text-xl tracking-wider mt-8 mb-3 text-signal-red">ANC Performance</h3>
+        <p>On my standardized subway test, the XM6 blocks 2.3dB more low-frequency noise than the XM5 and 1.8dB more than AirPods Max. The adaptive mode is significantly smarter — it transitions between ANC and transparency more naturally.</p>
+        <div class="flex items-center gap-4 mt-6 p-4 bg-white/[0.03] border border-white/5 rounded-sm">
+            <span class="font-display text-4xl text-signal-red">8.8</span>
+            <div><p class="font-bold">Excellent</p><p class="text-xs text-gray-500">Still the ANC king, but the gap is narrowing</p></div>
+        </div>
+        `
+    }
+];
+
+const recommendations = [
+    { name:"Samsung Galaxy S25", price:1299, category:"Smartphone", verdict:"top", img:"reco1" },
+    { name:"Google Pixel 9 Pro", price:999, category:"Smartphone", verdict:"value", img:"reco2" },
+    { name:"Nothing Phone 3", price:549, category:"Smartphone", verdict:"value", img:"reco3" },
+    { name:"M4 MacBook Pro 14\"", price:1599, category:"Laptop", verdict:"top", img:"reco4" },
+    { name:"Framework Laptop 13", price:849, category:"Laptop", verdict:"value", img:"reco5" },
+    { name:"MacBook Air M3", price:1099, category:"Laptop", verdict:"top", img:"reco6" },
+    { name:"Sony WH-1000XM6", price:349, category:"Audio", verdict:"top", img:"reco7" },
+    { name:"AirPods Pro 3", price:249, category:"Audio", verdict:"value", img:"reco8" },
+    { name:"Moondrop Aria 2", price:80, category:"Audio", verdict:"value", img:"reco9" },
+    { name:"Canon EOS R5 II", price:3899, category:"Camera", verdict:"premium", img:"reco10" },
+    { name:"Sony A7 IV", price:2498, category:"Camera", verdict:"top", img:"reco11" },
+    { name:"Fujifilm X-T50", price:1499, category:"Camera", verdict:"value", img:"reco12" },
+];
+
+// ========== FILM GRAIN ==========
+(function initGrain(){
+    const c=document.getElementById('grain'), ctx=c.getContext('2d');
+    function draw(){
+        c.width=256; c.height=256;
+        const id=ctx.createImageData(256,256);
+        for(let i=0;i<id.data.length;i+=4){const v=Math.random()*255;id.data[i]=v;id.data[i+1]=v;id.data[i+2]=v;id.data[i+3]=255;}
+        ctx.putImageData(id,0,0);
+    }
+    draw();
+    const overlay=c;
+    overlay.style.width='100%';overlay.style.height='100%';
+    // Animate grain shift
+    let frame=0;
+    function animate(){
+        frame++;
+        if(frame%3===0){ // Update every 3 frames for performance
+            draw();
+        }
+        requestAnimationFrame(animate);
+    }
+    // Use slower interval for performance
+    setInterval(draw,100);
+})();
+
+// ========== TOAST ==========
+function showToast(msg){
+    const t=document.getElementById('toast'), m=document.getElementById('toast-msg');
+    m.textContent=msg;
+    t.classList.remove('translate-y-20','opacity-0');
+    t.classList.add('translate-y-0','opacity-100');
+    setTimeout(()=>{t.classList.add('translate-y-20','opacity-0');t.classList.remove('translate-y-0','opacity-100');},3000);
+}
+
+// ========== MOBILE MENU ==========
+document.getElementById('mobile-menu-btn').addEventListener('click',()=>{
+    document.getElementById('mobile-menu').classList.toggle('hidden');
+});
+
+// ========== SMOOTH SCROLL ==========
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+    a.addEventListener('click',e=>{
+        e.preventDefault();
+        const t=document.querySelector(a.getAttribute('href'));
+        if(t) t.scrollIntoView({behavior:'smooth',block:'start'});
+        document.getElementById('mobile-menu').classList.add('hidden');
+    });
+});
+
+// ========== VIDEO GRID ==========
+function renderVideos(filter='all'){
+    const grid=document.getElementById('video-grid');
+    const filtered=filter==='all'?videos:videos.filter(v=>v.category===filter);
+    grid.innerHTML='';
+    filtered.forEach((v,i)=>{
+        const card=document.createElement('article');
+        card.className='vcard shuffle-card reveal';
+        card.style.transitionDelay=`${i*60}ms`;
+        card.innerHTML=`
+            <div class="vthumb relative aspect-video rounded-lg overflow-hidden bg-gray-900 mb-3">
+                <img src="https://picsum.photos/seed/${v.img}/640/360" alt="${v.title}" class="w-full h-full object-cover" loading="lazy">
+                <div class="scanlines absolute inset-0"></div>
+                <div class="play-overlay absolute inset-0 bg-black/20 flex items-center justify-center">
+                    <div class="w-12 h-12 bg-signal-red/90 rounded-full flex items-center justify-center"><i class="fa-solid fa-play text-white text-sm ml-0.5"></i></div>
+                </div>
+                <div class="playing-tag absolute top-2 right-2 bg-neon-yellow text-deep-black text-[9px] font-bold tracking-widest px-1.5 py-0.5 rounded-sm flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 bg-deep-black rounded-full animate-pulse"></span> PLAYING
+                </div>
+                <div class="absolute bottom-0 left-0 w-full h-0.5 bg-white/10"><div class="h-full bg-signal-red progress-bar"></div></div>
+                <span class="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] font-mono px-1.5 py-0.5 rounded">${v.duration}</span>
+            </div>
+            <span class="inline-block bg-white/5 text-gray-400 text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-sm mb-1.5 uppercase">${v.category}</span>
+            <h3 class="font-bold text-sm leading-snug mb-2 line-clamp-2">${v.title}</h3>
+            <div class="flex items-center gap-3 text-xs text-gray-500">
+                <span>${v.views} views</span><span>&middot;</span><span>${v.date}</span>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+    // Trigger reveal
+    requestAnimationFrame(()=>{grid.querySelectorAll('.reveal').forEach(el=>el.classList.add('visible'));});
+}
+renderVideos();
+
+// Filter buttons
+document.getElementById('filters').addEventListener('click',e=>{
+    if(!e.target.classList.contains('filter-btn')) return;
+    document.querySelectorAll('.filter-btn').forEach(b=>{
+        b.classList.remove('active','bg-signal-red','text-white');
+        b.classList.add('bg-white/5','text-gray-400');
+        b.setAttribute('aria-selected','false');
+    });
+    e.target.classList.add('active','bg-signal-red','text-white');
+    e.target.classList.remove('bg-white/5','text-gray-400');
+    e.target.setAttribute('aria-selected','true');
+    renderVideos(e.target.dataset.filter);
+});
+
+// ========== WRITTEN REVIEWS ==========
+function renderReviewTabs(){
+    const tabs=document.getElementById('review-tabs');
+    reviewsData.forEach((r,i)=>{
+        const btn=document.createElement('button');
+        btn.className=`review-tab text-xs font-bold tracking-wider px-4 py-2 rounded-sm transition-all duration-300 ${i===0?'bg-neon-yellow text-deep-black':'bg-white/5 text-gray-400 hover:bg-white/10'}`;
+        btn.textContent=r.title;
+        btn.dataset.index=i;
+        tabs.appendChild(btn);
+    });
+}
+renderReviewTabs();
+
+function renderReview(idx){
+    const r=reviewsData[idx];
+    document.getElementById('review-video-img').src=`https://picsum.photos/seed/${r.videoImg}/640/360`;
+    document.querySelector('#review-text .prose-container').innerHTML=r.content;
+    document.querySelectorAll('.review-tab').forEach((t,i)=>{
+        if(i===idx){t.className='review-tab text-xs font-bold tracking-wider px-4 py-2 rounded-sm transition-all duration-300 bg-neon-yellow text-deep-black';}
+        else{t.className='review-tab text-xs font-bold tracking-wider px-4 py-2 rounded-sm transition-all duration-300 bg-white/5 text-gray-400 hover:bg-white/10';}
+    });
+}
+renderReview(0);
+
+document.getElementById('review-tabs').addEventListener('click',e=>{
+    if(!e.target.classList.contains('review-tab')) return;
+    renderReview(parseInt(e.target.dataset.index));
+});
+
+// ========== RECOMMENDATIONS ==========
+function renderRecommendations(maxPrice){
+    const grid=document.getElementById('reco-grid');
+    const filtered=recommendations.filter(r=>r.price<=maxPrice).sort((a,b)=>b.price-a.price);
+    grid.innerHTML='';
+    if(filtered.length===0){
+        grid.innerHTML='<p class="col-span-full text-gray-500 text-sm">No products at this price point. Try increasing your budget.</p>';
+        return;
+    }
+    filtered.forEach((r,i)=>{
+        const badgeClass=r.verdict==='top'?'badge-top':r.verdict==='value'?'badge-value':'badge-premium';
+        const badgeText=r.verdict==='top'?'TOP PICK':r.verdict==='value'?'BEST VALUE':'PREMIUM';
+        const card=document.createElement('div');
+        card.className='bg-white/[0.03] border border-white/5 rounded-lg overflow-hidden hover:border-white/10 transition-all duration-300 reveal';
+        card.style.transitionDelay=`${i*50}ms`;
+        card.innerHTML=`
+            <div class="aspect-video relative overflow-hidden">
+                <img src="https://picsum.photos/seed/${r.img}/640/360" alt="${r.name}" class="w-full h-full object-cover" loading="lazy">
+                <span class="absolute top-2 left-2 ${badgeClass} text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-sm">${badgeText}</span>
+            </div>
+            <div class="p-4">
+                <span class="text-[10px] text-gray-500 tracking-widest uppercase">${r.category}</span>
+                <h4 class="font-bold text-sm mt-1 mb-2">${r.name}</h4>
+                <p class="font-display text-xl text-neon-yellow">$${r.price.toLocaleString()}</p>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+    requestAnimationFrame(()=>{grid.querySelectorAll('.reveal').forEach(el=>el.classList.add('visible'));});
+}
+
+const priceSlider=document.getElementById('price-slider');
+const priceDisplay=document.getElementById('price-display');
+renderRecommendations(1000);
+
+priceSlider.addEventListener('input',e=>{
+    const v=parseInt(e.target.value);
+    priceDisplay.textContent=v>=2000?'2,000+':v.toLocaleString();
+    renderRecommendations(v);
+});
+
+// ========== TYPEWRITER NEWSLETTER ==========
+const pitches=[
+    "Get early access to every review...",
+    "Exclusive BTS content every week...",
+    "Never miss a deep dive again...",
+    "Join 50K+ tech enthusiasts...",
+    "First word on buyer's guides..."
+];
+let pitchIdx=0, charIdx=0, isDeleting=false;
+const nlInput=document.getElementById('newsletter-input');
+
+function typewrite(){
+    const current=pitches[pitchIdx];
+    if(!isDeleting){
+        nlInput.placeholder=current.substring(0,charIdx+1);
+        charIdx++;
+        if(charIdx===current.length){
+            isDeleting=true;
+            setTimeout(typewrite,2000);
+            return;
+        }
+        setTimeout(typewrite,60+Math.random()*40);
+    } else {
+        nlInput.placeholder=current.substring(0,charIdx-1);
+        charIdx--;
+        if(charIdx===0){
+            isDeleting=false;
+            pitchIdx=(pitchIdx+1)%pitches.length;
+            setTimeout(typewrite,400);
+            return;
+        }
+        setTimeout(typewrite,30);
+    }
+}
+typewrite();
+
+// Newsletter form
+document.getElementById('newsletter-form').addEventListener('submit',e=>{
+    e.preventDefault();
+    const email=nlInput.value.trim();
+    if(!email||!email.includes('@')){
+        showToast('Please enter a valid email address');
+        return;
+    }
+    showToast('Welcome to The Weekly Signal! Check your inbox.');
+    nlInput.value='';
+});
+
+// ========== SCROLL-DRIVEN COLOR SHIFTS ==========
+const sections=document.querySelectorAll('section[data-accent]');
+const accentBar=document.getElementById('accent-bar');
+
+const sectionObserver=new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{
+        if(entry.isIntersecting){
+            const accent=entry.target.dataset.accent;
+            document.documentElement.style.setProperty('--accent',accent);
+            // Calculate glow
+            let glow;
+            if(accent==='#E30000') glow='rgba(227,0,0,0.15)';
+            else if(accent==='#0066FF') glow='rgba(0,102,255,0.15)';
+            else if(accent==='#CCFF00') glow='rgba(204,255,0,0.15)';
+            else glow='rgba(227,0,0,0.15)';
+            document.documentElement.style.setProperty('--accent-glow',glow);
+            accentBar.style.background=accent;
+            accentBar.style.boxShadow=`0 0 12px ${glow}`;
+        }
+    });
+},{threshold:0.3});
+
+sections.forEach(s=>sectionObserver.observe(s));
+
+// ========== SCROLL REVEAL ==========
+const revealObserver=new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{
+        if(entry.isIntersecting) entry.target.classList.add('visible');
+    });
+},{threshold:0.1,rootMargin:'0px 0px -50px 0px'});
+
+document.querySelectorAll('.reveal').forEach(el=>revealObserver.observe(el));
+
+// Re-observe after dynamic renders
+const mutationObs=new MutationObserver(()=>{
+    document.querySelectorAll('.reveal:not(.visible)').forEach(el=>revealObserver.observe(el));
+});
+mutationObs.observe(document.body,{childList:true,subtree:true});
+
+// ========== REVIEW PLAY BUTTON ==========
+let reviewPlaying=false;
+let reviewInterval=null;
+document.getElementById('review-play-btn').addEventListener('click',function(){
+    reviewPlaying=!reviewPlaying;
+    this.innerHTML=reviewPlaying?'<i class="fa-solid fa-pause text-white text-lg"></i>':'<i class="fa-solid fa-play text-white text-lg ml-0.5"></i>';
+    const prog=document.getElementById('review-progress');
+    const timeEl=document.getElementById('review-time');
+    if(reviewPlaying){
+        let pct=parseFloat(prog.style.width)||35;
+        reviewInterval=setInterval(()=>{
+            pct=Math.min(pct+0.3,100);
+            prog.style.width=pct+'%';
+            const totalSec=24*60+18;
+            const currentSec=Math.floor(totalSec*pct/100);
+            const cm=Math.floor(currentSec/60), cs=currentSec%60;
+            timeEl.textContent=`${cm}:${cs.toString().padStart(2,'0')} / 24:18`;
+            if(pct>=100) clearInterval(reviewInterval);
+        },200);
+    } else {
+        clearInterval(reviewInterval);
+    }
+});
+
+// ========== INITIAL REVEAL ==========
+setTimeout(()=>{
+    document.querySelectorAll('.reveal').forEach(el=>{
+        if(el.getBoundingClientRect().top<window.innerHeight) el.classList.add('visible');
+    });
+},100);
+</script>
+</body>
+</html>
